@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "342335686652",
+    "project_id": "truth-guard-82952",
+    "storage_bucket": "truth-guard-82952.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342335686652:android:190db658310bcf486d9479",
+        "android_client_info": {
+          "package_name": "com.samavaishnavi.truthguard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDf6PHDh9vY37kubSVPZz9frTKtDUiOCE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
