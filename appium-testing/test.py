@@ -31,13 +31,35 @@ except ImportError:
     sys.exit(1)
 
 # ─── CONFIGURATION ─────────────────────────────────────────────────────────────
-SDK_PATH = os.environ.get("ANDROID_HOME", r"C:\Users\HP\AppData\Local\Android\Sdk")
-ADB_PATH = os.path.join(SDK_PATH, "platform-tools", "adb.exe")
-EMULATOR_PATH = os.path.join(SDK_PATH, "emulator", "emulator.exe")
-APK_PATH = r"C:\Users\HP\Projects\TRUTH GUARD\app\build\outputs\apk\debug\app-debug.apk"
-AVD_NAME = "Pixel_6"
-APPIUM_PORT = 4723
-APPIUM_HOST = "127.0.0.1"
+IS_LINUX = sys.platform.startswith('linux')
+IS_CI   = os.environ.get('CI', '').lower() in ('true', '1')
+
+# Android SDK — CI runners expose ANDROID_HOME automatically
+SDK_PATH = os.environ.get(
+    "ANDROID_HOME",
+    "/usr/local/lib/android/sdk" if IS_LINUX else r"C:\Users\HP\AppData\Local\Android\Sdk"
+)
+
+# ADB / Emulator executables (no .exe on Linux)
+ADB_PATH      = "adb" if IS_LINUX else os.path.join(SDK_PATH, "platform-tools", "adb.exe")
+EMULATOR_PATH = "" if IS_LINUX else os.path.join(SDK_PATH, "emulator", "emulator.exe")
+
+# APK path — accept env override, then fall back to OS-appropriate default
+_apk_env = os.environ.get("APK_PATH", "")
+if _apk_env:
+    APK_PATH = _apk_env
+elif IS_LINUX:
+    # On CI the repo is checked out at GITHUB_WORKSPACE
+    APK_PATH = os.path.join(
+        os.environ.get("GITHUB_WORKSPACE", ""),
+        "app/build/outputs/apk/debug/app-debug.apk"
+    )
+else:
+    APK_PATH = r"C:\Users\HP\Projects\TRUTH GUARD\app\build\outputs\apk\debug\app-debug.apk"
+
+AVD_NAME     = os.environ.get("AVD_NAME", "Pixel_6")
+APPIUM_PORT  = 4723
+APPIUM_HOST  = "127.0.0.1"
 
 # Results tracking
 results = []
@@ -93,44 +115,69 @@ def tc(module, test_id, name, desc, fn):
 
 # ─── ENVIRONMENT MANAGEMENT ────────────────────────────────────────────────────
 def start_emulator():
+    """Start emulator only when NOT running in CI (CI runner provides it)."""
     print("\n🔍 Checking for running emulator/device...")
     res = subprocess.run([ADB_PATH, "devices"], capture_output=True, text=True)
-    if "emulator-" in res.stdout:
-        print("🟢 Emulator is already running.")
+    if "emulator-" in res.stdout or "device" in res.stdout.split("\n", 1)[-1]:
+        print("🟢 Emulator / device is already running.")
         return
 
+    if IS_CI:
+        # In CI the reactivecircus/android-emulator-runner action handles the emulator.
+        # If we reach here the emulator hasn't booted yet — wait for it.
+        print("⏳ CI mode: waiting for emulator provided by runner action...")
+        subprocess.run([ADB_PATH, "wait-for-device"], timeout=180)
+        for _ in range(60):
+            r = subprocess.run([ADB_PATH, "shell", "getprop", "sys.boot_completed"],
+                               capture_output=True, text=True)
+            if "1" in r.stdout:
+                print("🟢 Emulator is ready.")
+                time.sleep(3)
+                return
+            time.sleep(3)
+        print("⚠️  Warning: emulator boot check timed out.")
+        return
+
+    # ── Local (Windows) path ──
+    if not EMULATOR_PATH:
+        raise RuntimeError("EMULATOR_PATH not configured for this platform.")
     print(f"🚀 Launching Android Emulator: {AVD_NAME}...")
     subprocess.Popen([EMULATOR_PATH, "-avd", AVD_NAME, "-delay-adb"])
-    
     print("⏳ Waiting for device to connect via ADB...")
     subprocess.run([ADB_PATH, "wait-for-device"])
-    
     print("⏳ Waiting for Android system boot to complete...")
     for _ in range(60):
-        boot_res = subprocess.run([ADB_PATH, "shell", "getprop", "sys.boot_completed"], capture_output=True, text=True)
+        boot_res = subprocess.run(
+            [ADB_PATH, "shell", "getprop", "sys.boot_completed"],
+            capture_output=True, text=True
+        )
         if "1" in boot_res.stdout:
             print("🟢 Emulator booted successfully.")
-            # Add a small buffer to let packages load
             time.sleep(3)
             return
         time.sleep(2)
     print("⚠️ Warning: Emulator boot check timed out.")
 
 def start_appium_server():
-    print("🚀 Starting Appium Server in the background...")
-    # Redirect output to log
-    log_f = open("appium_server.log", "w")
-    cmd = ["cmd", "/c", "npx", "appium", "--port", str(APPIUM_PORT), "--address", APPIUM_HOST]
-    
-    # Inject env variables so Appium can resolve Android SDK and Java paths
-    env = os.environ.copy()
-    env["ANDROID_HOME"] = SDK_PATH
-    env["ANDROID_SDK_ROOT"] = SDK_PATH
-    env["JAVA_HOME"] = r"C:\Program Files\Android\Android Studio\jbr"
-    
-    proc = subprocess.Popen(cmd, env=env, stdout=log_f, stderr=log_f)
-    time.sleep(6) # Give server time to bind port
+    """Start Appium only in local mode. In CI the workflow script starts it."""
+    if IS_CI:
+        print("ℹ️  CI mode: Appium server is managed by the workflow — skipping local start.")
+        return None, None
 
+    print("🚀 Starting Appium Server in the background...")
+    log_f = open("appium_server.log", "w")
+
+    # Windows: use cmd /c npx appium
+    cmd = ["cmd", "/c", "npx", "appium",
+           "--port", str(APPIUM_PORT), "--address", APPIUM_HOST]
+
+    env = os.environ.copy()
+    env["ANDROID_HOME"]     = SDK_PATH
+    env["ANDROID_SDK_ROOT"] = SDK_PATH
+    env["JAVA_HOME"]        = r"C:\Program Files\Android\Android Studio\jbr"
+
+    proc = subprocess.Popen(cmd, env=env, stdout=log_f, stderr=log_f)
+    time.sleep(6)  # Give server time to bind port
     print("🟢 Appium Server started.")
     return proc, log_f
 
