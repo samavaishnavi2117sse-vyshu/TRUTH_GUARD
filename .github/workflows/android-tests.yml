@@ -1,0 +1,92 @@
+name: TruthGuard Android E2E Testing CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  android-tests:
+    name: 📱 Appium E2E Tests — 100 Test Cases
+    runs-on: macos-13 # macos-13 or macos-latest supports hardware acceleration for Android emulators
+
+    steps:
+      # ── 1. CHECKOUT SOURCE CODE ──────────────────────────────────────────────
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      # ── 2. SETUP JAVA DEVELOPMENT KIT (JDK) ─────────────────────────────────
+      - name: ☕ Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      # ── 3. SETUP NODE.JS & APPIUM ───────────────────────────────────────────
+      - name: 🟢 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 🚀 Install Appium & UIAutomator2 Driver
+        run: |
+          npm install -g appium
+          appium driver install uiautomator2
+
+      # ── 4. SETUP PYTHON ─────────────────────────────────────────────────────
+      - name: 🐍 Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'appium-testing/requirements.txt'
+
+      - name: 📦 Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r appium-testing/requirements.txt
+
+      # ── 5. BUILD DEBUG APK ──────────────────────────────────────────────────
+      - name: 🔨 Build Debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      # ── 6. RUN EMULATOR & EXECUTE TESTS ─────────────────────────────────────
+      - name: 📱 Run Appium E2E Test Suite
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            # Start Appium server in background
+            appium --port 4723 --address 127.0.0.1 &
+            sleep 8
+            
+            # Run the Python test runner directly
+            python appium-testing/test.py
+
+      # ── 7. PUBLISH STEP SUMMARY ─────────────────────────────────────────────
+      - name: 📋 Publish Test Results to Step Summary
+        if: always()
+        run: |
+          if [ -f appium-testing/test-summary.md ]; then
+            cat appium-testing/test-summary.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ No test summary markdown file found." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # ── 8. UPLOAD EXCEL ARCHIVE ─────────────────────────────────────────────
+      - name: 📤 Upload Excel Report Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Appium_E2E_Report_TruthGuard_Run-${{ github.run_number }}
+          path: appium-testing/Appium_E2E_Report_*.xlsx
+          if-no-files-found: error
