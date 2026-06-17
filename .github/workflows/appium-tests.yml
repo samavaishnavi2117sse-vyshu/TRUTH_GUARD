@@ -59,8 +59,17 @@ jobs:
           script: |
             # Start Appium server in background
             appium &
-            # Wait for Appium server to start
-            sleep 8
+            # Wait for Appium port 4723 to open
+            timeout=60
+            while ! nc -z localhost 4723; do
+              sleep 1
+              timeout=$((timeout - 1))
+              if [ $timeout -le 0 ]; then
+                echo "Appium server failed to start within 60 seconds."
+                exit 1
+              fi
+            done
+            echo "Appium server is up and running!"
             # Run mobile tests
             cd appium-testing
             python test.py
