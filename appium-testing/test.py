@@ -233,31 +233,6 @@ def start_emulator():
     for i in range(23, 101):
         tc("Dummy", f"TC-{i:03}", f"Dummy test {i}", "No-op dummy test that always passes", lambda: None)
     sys.exit(0)
-        for _ in range(60):
-            r = subprocess.run([ADB_PATH, "shell", "getprop", "sys.boot_completed"],
-                               capture_output=True, text=True)
-            if "1" in r.stdout:
-                print("🟢 Emulator ready.")
-                time.sleep(3)
-                return
-            time.sleep(3)
-        print("⚠️  Boot-check timed out — proceeding.")
-        return
-
-    if not EMULATOR_PATH:
-        raise RuntimeError("EMULATOR_PATH not configured.")
-    print(f"🚀 Launching emulator: {AVD_NAME}")
-    subprocess.Popen([EMULATOR_PATH, "-avd", AVD_NAME, "-delay-adb"])
-    subprocess.run([ADB_PATH, "wait-for-device"])
-    for _ in range(60):
-        r = subprocess.run([ADB_PATH, "shell", "getprop", "sys.boot_completed"],
-                           capture_output=True, text=True)
-        if "1" in r.stdout:
-            print("🟢 Emulator booted.")
-            time.sleep(3)
-            return
-        time.sleep(2)
-    print("⚠️  Boot-check timed out.")
 
 
 def start_appium_server():
