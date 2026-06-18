@@ -114,25 +114,37 @@ def tc(module, test_id, name, desc, fn):
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ELEMENT FINDERS / INTERACTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
-def find_text(driver, text, timeout=8):
-    """Find an element containing text using multiple UIAutomator strategies."""
+
+def wait_for_element(driver, by, selector, timeout=8):
+    """Wait for an element to be present using the given strategy."""
     end = time.time() + timeout
     while time.time() < end:
-        for val in [
-            f'new UiSelector().textContains("{text}")',
-            f'new UiSelector().text("{text}")',
-            f'new UiSelector().descriptionContains("{text}")',
-        ]:
-            try:
-                return driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, val)
-            except Exception:
-                pass
         try:
-            return driver.find_element(AppiumBy.XPATH, f'//*[contains(@text, "{text}")]')
+            return driver.find_element(by, selector)
+        except Exception:
+            time.sleep(0.3)
+    raise AssertionError(f"Element with {by}='{selector}' not found after {timeout}s")
+
+
+def find_text(driver, text, timeout=8):
+    """Find an element containing given text using multiple UIAutomator strategies."""
+    end = time.time() + timeout
+    while time.time() < end:
+        # Strategy 1: UIAutomator textContains
+        try:
+            return driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR,
+                                       f'new UiSelector().textContains("{text}")')
+        except Exception:
+            pass
+        # Strategy 2: XPath contains
+        try:
+            return driver.find_element(AppiumBy.XPATH,
+                                       f'//*[contains(@text, "{text}")]')
         except Exception:
             pass
         time.sleep(0.3)
     raise AssertionError(f"Text '{text}' not found on screen after {timeout}s")
+
 
 
 def assert_visible(driver, text, timeout=8):
@@ -159,7 +171,7 @@ def click_btn(driver, text, timeout=8):
 
 def enter_text(driver, text):
     """Clear and optionally type into the single EditText on screen."""
-    el = driver.find_element(AppiumBy.CLASS_NAME, "android.widget.EditText")
+    el = wait_for_element(driver, AppiumBy.CLASS_NAME, "android.widget.EditText")
     el.clear()
     if text:
         el.send_keys(text)
@@ -172,17 +184,32 @@ def go_back(driver, pause=0.5):
 
 
 def analyze(driver, text):
-    """Enter text and click Analyze; returns without asserting result."""
+    """Enter text, click Analyze, and wait for result card to appear."""
     enter_text(driver, text)
     click_btn(driver, "Analyze")
+    # Wait for result card text indicating analysis completed
+    wait_for_element(driver, AppiumBy.ANDROID_UIAUTOMATOR, f'new UiSelector().textContains("Analysis Result")', timeout=15)
+    time.sleep(0.6)
 
 
 def swipe_down(driver):
-    driver.swipe(540, 1400, 540, 600, 500)
+    # Use mobile swipe action compatible with UIAutomator2
+    driver.execute_script('mobile: swipe', {
+        'direction': 'down',
+        'element': None,
+        'percent': 0.7
+    })
 
 
 def swipe_up(driver):
-    driver.swipe(540, 600, 540, 1400, 500)
+    driver.execute_script('mobile: swipe', {
+        'direction': 'up',
+        'element': None,
+        'percent': 0.7
+    })
+    # Deprecated swipe_up removed – using mobile swipe implementation above.
+    # def swipe_up(driver):
+    #     driver.swipe(540, 600, 540, 1400, 500)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ENVIRONMENT SETUP
@@ -987,9 +1014,9 @@ def _check_clickable(driver, text):
         raise AssertionError(f"'{text}' is not clickable: {e}")
 
 
-
 def _check_field_enabled(driver):
-    el = driver.find_element(AppiumBy.CLASS_NAME, "android.widget.EditText")
+    # Wait for the EditText field to appear and be enabled
+    el = wait_for_element(driver, AppiumBy.CLASS_NAME, "android.widget.EditText")
     if el.get_attribute("enabled") != "true":
         raise AssertionError("EditText is not enabled")
 
