@@ -1,0 +1,82 @@
+# Implementation Plan for Android Emulator CI
+
+## Goal Description
+
+Add a GitHub Actions workflow using `reactivecircus/android-emulator-runner@v2` to set up the Android emulator, install SDK components, and run the Appium test suite. This will allow CI to execute the tests without manual emulator setup.
+
+## User Review Required
+
+> [!IMPORTANT]
+> Verify that you want the CI workflow added to the repository and that the repository’s `main` branch can be updated.
+
+## Open Questions
+
+- Do you want the workflow to run on every push, or only on manual triggers? (e.g., `workflow_dispatch`)
+- Should we keep the existing dummy test report generation or also run the real test suite in CI?
+
+## Proposed Changes
+
+### [NEW] [.github/workflows/android_emulator.yml](file:///c:/Users/HP/Projects/TRUTH%20GUARD/.github/workflows/android_emulator.yml)
+```yaml
+name: Android Emulator CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Install Android SDK components
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip openjdk-11-jdk
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip -d $HOME/android-sdk
+          yes | $HOME/android-sdk/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/android-sdk "platform-tools" "platforms;android-33" "build-tools;33.0.0" "system-images;android-33;default;x86_64"
+
+      - name: Run Android Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: default
+          arch: x86_64
+          script: |
+            # Start Appium server
+            npx appium --port 4723 --address 127.0.0.1 --log-level error &
+            sleep 30
+            # Install APK
+            adb install -r ${{ github.workspace }}/app/build/outputs/apk/debug/app-debug.apk
+            # Run Python tests
+            pip install -r requirements.txt
+            python appium-testing/test.py
+```
+
+### [MODIFY] [appium-testing/test.py](file:///c:/Users/HP/Projects/TRUTH%20GUARD/appium-testing/test.py)
+```diff
+@@
+-def start_emulator():
+-    print("\n📋 MODULE X: Dummy Tests — 100 Passing Test Cases (TC-023 to TC-100)")
+-    for i in range(23, 101):
+-        tc("Dummy", f"TC-{i:03}", f"Dummy test {i}", "No-op dummy test that always passes", lambda: None)
+-    sys.exit(0)
++def start_emulator():
++    # In CI the emulator is provided by the `android-emulator-runner` action.
++    # This function is retained for local debugging but does nothing in CI.
++    if os.getenv('CI'):
++        return
++    print("\n📋 MODULE X: Dummy Tests — 100 Passing Test Cases (TC-023 to TC-100)")
++    for i in range(23, 101):
++        tc("Dummy", f"TC-{i:03}", f"Dummy test {i}", "No-op dummy test that always passes", lambda: None)
++    sys.exit(0)
+```
