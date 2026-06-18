@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Move to script directory
+cd /d "%~dp0"
+
 echo.
 echo ==========================================================
 echo    TRUTHGUARD ANDROID -- APPIUM E2E TEST RUNNER
@@ -34,7 +37,7 @@ echo.
 
 :: ── Install / update dependencies ─────────────────────────────────────────
 echo [3/5] Installing / updating dependencies...
-venv\Scripts\pip.exe install --upgrade -r requirements.txt --quiet
+venv\Scripts\pip.exe install --upgrade -r "%~dp0requirements.txt" --quiet
 if !errorlevel! neq 0 (
     echo ERROR: pip install failed.
     pause & exit /b 1
@@ -53,12 +56,19 @@ if !errorlevel! neq 0 (
 echo.
 
 where appium >nul 2>&1
-if !errorlevel! neq 0 (
-    echo   [WARN] Appium not found in PATH.
-    echo          Install with: npm install -g appium^&^& appium driver install uiautomator2
+if %errorlevel% neq 0 (
+    echo   [INFO] Installing Appium globally.
+    call npm install -g appium@3.0.0-rc.2
+    if !errorlevel! neq 0 (
+        echo   [ERROR] Failed to install Appium.
+        pause & exit /b 1
+    )
+    call appium driver install uiautomator2
 ) else (
-    echo   Appium found.
+    echo   [INFO] Appium already installed.
 )
+echo   Appium version:
+appium -v
 echo.
 
 :: ── Run tests ─────────────────────────────────────────────────────────────

@@ -40,7 +40,7 @@ jobs:
 
       - name: 🚀 Install Appium & UIAutomator2 Driver
         run: |
-          npm install -g appium@2.11.5
+          npm install -g appium@3.0.0-rc.2
           appium driver install uiautomator2
           appium driver list --installed
 
