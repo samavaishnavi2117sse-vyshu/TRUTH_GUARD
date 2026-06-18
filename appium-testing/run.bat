@@ -1,44 +1,81 @@
 @echo off
 setlocal enabledelayedexpansion
 
+echo.
 echo ==========================================================
-echo   🛡️  TRUTHGUARD ANDROID — APPIUM TEST RUNNER LAUNCHER
+echo    TRUTHGUARD ANDROID -- APPIUM E2E TEST RUNNER
+echo    135 Test Cases  ^|  8 Modules  ^|  Python 3.12 + Appium
 echo ==========================================================
+echo.
 
-:: Set Java and Android SDK paths
-echo Configured JAVA_HOME and Android SDK paths...
+:: ── Java + Android SDK paths ───────────────────────────────────────────────
 set "JAVA_HOME=C:\Program Files\Android\Android Studio\jbr"
 set "ANDROID_HOME=C:\Users\HP\AppData\Local\Android\Sdk"
-
-:: Update PATH
 set "PATH=%JAVA_HOME%\bin;%ANDROID_HOME%\platform-tools;%ANDROID_HOME%\emulator;%PATH%"
 
-:: Check if Python is installed in venv, if not create venv
+echo [1/5] Environment configured.
+echo   JAVA_HOME    = %JAVA_HOME%
+echo   ANDROID_HOME = %ANDROID_HOME%
+echo.
+
+:: ── Virtual environment ────────────────────────────────────────────────────
 if not exist "venv" (
-    echo Virtual environment 'venv' not found. Creating virtual environment...
-    "C:\Users\HP\AppData\Local\Programs\Python\Python312\python.exe" -m venv venv
+    echo [2/5] Creating Python virtual environment...
+    python -m venv venv
     if !errorlevel! neq 0 (
-        echo Error: Failed to create python virtual environment.
-        exit /b 1
+        echo ERROR: Failed to create virtual environment. Ensure Python 3.9+ is installed.
+        pause & exit /b 1
     )
+    echo       venv created successfully.
+) else (
+    echo [2/5] Virtual environment already exists.
 )
+echo.
 
-:: Install dependencies
-echo Installing requirements...
-venv\Scripts\pip.exe install -r requirements.txt
+:: ── Install / update dependencies ─────────────────────────────────────────
+echo [3/5] Installing / updating dependencies...
+venv\Scripts\pip.exe install --upgrade -r requirements.txt --quiet
 if !errorlevel! neq 0 (
-    echo Error: Failed to install pip requirements.
-    exit /b 1
+    echo ERROR: pip install failed.
+    pause & exit /b 1
 )
+echo       Dependencies ready.
+echo.
 
-:: Execute tests
-echo Launching Appium Test Suite...
+:: ── Pre-flight checks ─────────────────────────────────────────────────────
+echo [4/5] Pre-flight checks...
+
+where adb >nul 2>&1
+if !errorlevel! neq 0 (
+    echo   [WARN] adb not found in PATH -- using SDK path.
+)
+"%ANDROID_HOME%\platform-tools\adb.exe" devices
+echo.
+
+where appium >nul 2>&1
+if !errorlevel! neq 0 (
+    echo   [WARN] Appium not found in PATH.
+    echo          Install with: npm install -g appium^&^& appium driver install uiautomator2
+) else (
+    echo   Appium found.
+)
+echo.
+
+:: ── Run tests ─────────────────────────────────────────────────────────────
+echo [5/5] Launching Appium E2E Test Suite...
+echo ----------------------------------------------------------
 venv\Scripts\python.exe test.py
-if !errorlevel! neq 0 (
-    echo Error: Test execution failed.
-    exit /b 1
+set EXIT_CODE=!errorlevel!
+echo ----------------------------------------------------------
+
+if !EXIT_CODE! neq 0 (
+    echo.
+    echo ERROR: Test runner exited with code !EXIT_CODE!
+    echo Check the log above and the generated .xlsx report.
+) else (
+    echo.
+    echo Testing complete! Open the Appium_E2E_Report_*.xlsx file for the full report.
 )
 
 echo.
-echo ✨ Execution completed successfully!
 pause
