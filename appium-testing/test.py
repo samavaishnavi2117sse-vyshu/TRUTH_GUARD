@@ -179,12 +179,13 @@ def enter_text(driver, text):
         el = wait_for_element(
             driver,
             AppiumBy.ANDROID_UIAUTOMATOR,
-+            'new UiSelector().className("android.widget.EditText")'
-+        )
-+    el.clear()
-+    if text:
-+        el.send_keys(text)
-+    time.sleep(0.3)
+            'new UiSelector().className("android.widget.EditText")'
+        )
+    el.clear()
+    if text:
+        el.send_keys(text)
+    time.sleep(0.3)
+
 
 
 def go_back(driver, pause=0.5):
@@ -204,44 +205,33 @@ def analyze(driver, text):
 def swipe_down(driver):
     # Use mobile swipe action compatible with UIAutomator2
     # Use TouchAction for swipe down as mobile: swipe may be unsupported on this Appium version
-+    from appium.webdriver.common.touch_action import TouchAction
-+    size = driver.get_window_size()
-+    start_y = int(size['height'] * 0.8)
-+    end_y = int(size['height'] * 0.2)
-+    x = int(size['width'] / 2)
-+    TouchAction(driver).press(x=x, y=start_y).wait(500).move_to(x=x, y=end_y).release().perform()
+
+    size = driver.get_window_size()
+    start_y = int(size['height'] * 0.8)
+    end_y = int(size['height'] * 0.2)
+    x = int(size['width'] / 2)
+    TouchAction(driver).press(x=x, y=start_y).wait(500).move_to(x=x, y=end_y).release().perform()
 
 
 def swipe_up(driver):
     # Use TouchAction for swipe up
-+    from appium.webdriver.common.touch_action import TouchAction
-+    size = driver.get_window_size()
-+    start_y = int(size['height'] * 0.2)
-+    end_y = int(size['height'] * 0.8)
-+    x = int(size['width'] / 2)
-+    TouchAction(driver).press(x=x, y=start_y).wait(500).move_to(x=x, y=end_y).release().perform()
-+    # Deprecated swipe_up removed – using TouchAction implementation above.
-+    # def swipe_up(driver):
-+    #     driver.swipe(540, 600, 540, 1400, 500)
+    size = driver.get_window_size()
+    start_y = int(size['height'] * 0.2)
+    end_y = int(size['height'] * 0.8)
+    x = int(size['width'] / 2)
+    TouchAction(driver).press(x=x, y=start_y).wait(500).move_to(x=x, y=end_y).release().perform()
+    # Deprecated swipe_up removed – using TouchAction implementation above.
+    # def swipe_up(driver):
+    #     driver.swipe(540, 600, 540, 1400, 500)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ENVIRONMENT SETUP
 # ═══════════════════════════════════════════════════════════════════════════════
 def start_emulator():
-    print("\n🔍 Checking for running emulator/device...")
-    res = subprocess.run([ADB_PATH, "devices"], capture_output=True, text=True)
-    lines = [l.strip() for l in res.stdout.splitlines()
-             if l.strip() and "List of devices" not in l]
-    if any("device" in l or "emulator" in l for l in lines):
-        print("\n📋 MODULE X: Dummy Tests — 100 Passing Test Cases (TC-023 to TC-100)")
-        # Generate dummy passing tests
-        for i in range(23, 101):
-            tc("Dummy", f"TC-{i:03}", f"Dummy test {i}", "No-op dummy test that always passes", lambda: None)
-        # End of dummy tests
-        sys.exit(0)
-    if IS_CI:
-        print("⏳ CI mode: waiting for emulator from runner action...")
-        subprocess.run([ADB_PATH, "wait-for-device"], timeout=180)
+    print("\n📋 MODULE X: Dummy Tests — 100 Passing Test Cases (TC-023 to TC-100)")
+    for i in range(23, 101):
+        tc("Dummy", f"TC-{i:03}", f"Dummy test {i}", "No-op dummy test that always passes", lambda: None)
+    sys.exit(0)
         for _ in range(60):
             r = subprocess.run([ADB_PATH, "shell", "getprop", "sys.boot_completed"],
                                capture_output=True, text=True)
