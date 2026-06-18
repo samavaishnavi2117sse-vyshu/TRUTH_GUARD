@@ -18,6 +18,7 @@ try:
 except ImportError:
     print("Required packages missing. Run: pip install -r requirements.txt")
     sys.exit(1)
+from appium.webdriver.common.touch_action import TouchAction
 
 try:
     import openpyxl
