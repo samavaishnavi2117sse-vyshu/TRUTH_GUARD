@@ -233,12 +233,9 @@ def start_emulator():
     lines = [l.strip() for l in res.stdout.splitlines()
              if l.strip() and "List of devices" not in l]
     if any("device" in l or "emulator" in l for l in lines):
-        print("\n📋 MODULE X: Dummy Tests — 100 Passing Test Cases (TC-023 to TC-100)")
-        # Generate dummy passing tests
-        for i in range(23, 101):
-            tc("Dummy", f"TC-{i:03}", f"Dummy test {i}", "No-op dummy test that always passes", lambda: None)
-        # End of dummy tests
-        sys.exit(0)
+        print("🟢 Emulator/device already running.")
+        return
+
     if IS_CI:
         print("⏳ CI mode: waiting for emulator from runner action...")
         subprocess.run([ADB_PATH, "wait-for-device"], timeout=180)
