@@ -9,14 +9,14 @@ on:
 jobs:
   android-tests:
     name: 📱 Appium E2E Tests — 100 Test Cases
-    runs-on: ubuntu-latest  # Picks up in ~30s; KVM gives full hardware acceleration
+    runs-on: ubuntu-latest
 
     steps:
       # ── 1. CHECKOUT ──────────────────────────────────────────────────────────
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      # ── 2. KVM HARDWARE ACCELERATION (required for Android emulator on Linux) ─
+      # ── 2. KVM HARDWARE ACCELERATION ─────────────────────────────────────────
       - name: ⚡ Enable KVM Hardware Acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
@@ -25,10 +25,10 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       # ── 3. JDK ───────────────────────────────────────────────────────────────
-      - name: ☕ Set up JDK 21
+      - name: ☕ Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'temurin'
           cache: gradle
 
@@ -40,8 +40,9 @@ jobs:
 
       - name: 🚀 Install Appium & UIAutomator2 Driver
         run: |
-          npm install -g appium
+          npm install -g appium@2.11.5
           appium driver install uiautomator2
+          appium driver list --installed
 
       # ── 5. PYTHON ────────────────────────────────────────────────────────────
       - name: 🐍 Set up Python 3.12
@@ -55,53 +56,52 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r appium-testing/requirements.txt
+          pip list | grep -iE "appium|selenium|openpyxl"
 
       # ── 6. BUILD DEBUG APK ───────────────────────────────────────────────────
       - name: 🔨 Build Debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-          echo "✅ APK built at: app/build/outputs/apk/debug/app-debug.apk"
+          ./gradlew assembleDebug --no-daemon --stacktrace
           ls -lh app/build/outputs/apk/debug/app-debug.apk
 
       # ── 7. RUN EMULATOR + APPIUM + TESTS ────────────────────────────────────
-      #    The emulator-runner action:
-      #      • boots API-33 x86_64 emulator with KVM
-      #      • waits until boot_completed before calling our script
-      #      • tears it down after the script exits
-      - name: 📱 Run Appium E2E Tests (Emulator + Appium + Python)
+      - name: 📱 Run Appium E2E Tests
         uses: reactivecircus/android-emulator-runner@v2
         env:
           CI: 'true'
           APK_PATH: ${{ github.workspace }}/app/build/outputs/apk/debug/app-debug.apk
-          AVD_NAME: 'test'   # emulator-runner creates an AVD named "test" by default
+          AVD_NAME: 'test'
         with:
           api-level: 33
-          target: google_apis
+          target: default
           arch: x86_64
-          profile: Nexus 6
           avd-name: test
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
-            echo "=== Emulator is ready — listing devices ==="
-            adb devices
+            echo "=== Emulator ready — listing devices ==="
+            adb devices -l
 
-            echo "=== Starting Appium server ==="
-            appium --port 4723 --address 127.0.0.1 --log-level error \
-              --base-path / &
-            APPIUM_PID=$!
-            echo "Appium PID: $APPIUM_PID"
+            echo "=== Verify APK exists ==="
+            ls -lh "$APK_PATH"
 
-            echo "=== Waiting 12s for Appium to bind ==="
-            sleep 12
+            echo "=== Starting Appium 2.x server ==="
+            nohup appium --port 4723 --address 127.0.0.1 --log-level error > /tmp/appium.log 2>&1 &
+            sleep 30
+
+            echo "=== Appium readiness check ==="
+            curl -sf http://127.0.0.1:4723/status && echo "Appium is ready" || { echo "Appium log:"; cat /tmp/appium.log; }
 
             echo "=== Running Python test suite ==="
             python appium-testing/test.py
 
-            echo "=== Stopping Appium server ==="
-            kill $APPIUM_PID 2>/dev/null || true
+            echo "=== Stopping Appium ==="
+            pkill -f "node.*appium" 2>/dev/null || true
+
+            echo "=== Report files ==="
+            ls -lh appium-testing/ | grep -E "xlsx|md" || echo "No report files yet"
 
       # ── 8. PUBLISH STEP SUMMARY ──────────────────────────────────────────────
       - name: 📋 Publish Results to Actions Summary
@@ -109,7 +109,7 @@ jobs:
         run: |
           if [ -f appium-testing/test-summary.md ]; then
             cat appium-testing/test-summary.md >> $GITHUB_STEP_SUMMARY
-            echo "✅ Test summary published to GitHub Actions UI"
+            echo "✅ Summary published"
           else
             echo "## ⚠️ Test Summary Not Found" >> $GITHUB_STEP_SUMMARY
             echo "test-summary.md was not generated — check runner logs above." >> $GITHUB_STEP_SUMMARY
@@ -133,6 +133,6 @@ jobs:
           echo "╔══════════════════════════════════════════════════════════════╗"
           echo "║    ✅ TruthGuard Appium E2E — Test Run Complete             ║"
           echo "╠══════════════════════════════════════════════════════════════╣"
-          echo "║  📊 View inline → Summary tab (left sidebar of this run)   ║"
-          echo "║  📥 Download Excel → Artifacts section at bottom of run    ║"
+          echo "║  📊 View inline  → Summary tab (left sidebar of this run)  ║"
+          echo "║  📥 Download xlsx → Artifacts section at bottom of run     ║"
           echo "╚══════════════════════════════════════════════════════════════╝"
