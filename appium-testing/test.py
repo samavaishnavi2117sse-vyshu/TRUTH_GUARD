@@ -171,11 +171,20 @@ def click_btn(driver, text, timeout=8):
 
 def enter_text(driver, text):
     """Clear and optionally type into the single EditText on screen."""
-    el = wait_for_element(driver, AppiumBy.CLASS_NAME, "android.widget.EditText")
-    el.clear()
-    if text:
-        el.send_keys(text)
-    time.sleep(0.3)
+    # Try locating the EditText using multiple strategies for better reliability
+    try:
+        el = wait_for_element(driver, AppiumBy.CLASS_NAME, "android.widget.EditText")
+    except Exception:
+        # Fallback to UIAutomator selector based on hint or resource-id if class name fails
+        el = wait_for_element(
+            driver,
+            AppiumBy.ANDROID_UIAUTOMATOR,
++            'new UiSelector().className("android.widget.EditText")'
++        )
++    el.clear()
++    if text:
++        el.send_keys(text)
++    time.sleep(0.3)
 
 
 def go_back(driver, pause=0.5):
@@ -194,22 +203,26 @@ def analyze(driver, text):
 
 def swipe_down(driver):
     # Use mobile swipe action compatible with UIAutomator2
-    driver.execute_script('mobile: swipe', {
-        'direction': 'down',
-        'element': None,
-        'percent': 0.7
-    })
+    # Use TouchAction for swipe down as mobile: swipe may be unsupported on this Appium version
++    from appium.webdriver.common.touch_action import TouchAction
++    size = driver.get_window_size()
++    start_y = int(size['height'] * 0.8)
++    end_y = int(size['height'] * 0.2)
++    x = int(size['width'] / 2)
++    TouchAction(driver).press(x=x, y=start_y).wait(500).move_to(x=x, y=end_y).release().perform()
 
 
 def swipe_up(driver):
-    driver.execute_script('mobile: swipe', {
-        'direction': 'up',
-        'element': None,
-        'percent': 0.7
-    })
-    # Deprecated swipe_up removed – using mobile swipe implementation above.
-    # def swipe_up(driver):
-    #     driver.swipe(540, 600, 540, 1400, 500)
+    # Use TouchAction for swipe up
++    from appium.webdriver.common.touch_action import TouchAction
++    size = driver.get_window_size()
++    start_y = int(size['height'] * 0.2)
++    end_y = int(size['height'] * 0.8)
++    x = int(size['width'] / 2)
++    TouchAction(driver).press(x=x, y=start_y).wait(500).move_to(x=x, y=end_y).release().perform()
++    # Deprecated swipe_up removed – using TouchAction implementation above.
++    # def swipe_up(driver):
++    #     driver.swipe(540, 600, 540, 1400, 500)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ENVIRONMENT SETUP
