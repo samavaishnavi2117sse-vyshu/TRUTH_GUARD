@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="gcm_defaultSenderId" translatable="false">342335686652</string>
-    <string name="google_api_key" translatable="false">AIzaSyBDf6PHDh9vY37kubSVPZz9frTKtDUiOCE</string>
-    <string name="google_app_id" translatable="false">1:342335686652:android:190db658310bcf486d9479</string>
-    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyBDf6PHDh9vY37kubSVPZz9frTKtDUiOCE</string>
-    <string name="google_storage_bucket" translatable="false">truth-guard-82952.firebasestorage.app</string>
-    <string name="project_id" translatable="false">truth-guard-82952</string>
-</resources>

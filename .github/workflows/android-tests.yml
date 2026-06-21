@@ -65,7 +65,15 @@ jobs:
           ./gradlew assembleDebug --no-daemon --stacktrace
           ls -lh app/build/outputs/apk/debug/app-debug.apk
 
-      # ── 7. RUN EMULATOR + APPIUM + TESTS ────────────────────────────────────
+      # ── 7. START APPIUM SERVER ──────────────────────────────────────────────
+      - name: 🚀 Start Appium Server
+        run: |
+          nohup appium --port 4723 --address 127.0.0.1 --log-level error > /tmp/appium.log 2>&1 &
+          echo $! > /tmp/appium.pid
+          sleep 30
+          curl -sf http://127.0.0.1:4723/status && echo "Appium is ready" || { echo "Appium log:"; cat /tmp/appium.log; exit 1; }
+
+      # ── 8. RUN EMULATOR + TESTS ─────────────────────────────────────────────
       - name: 📱 Run Appium E2E Tests
         timeout-minutes: 20
         uses: reactivecircus/android-emulator-runner@v2
@@ -88,24 +96,24 @@ jobs:
             echo "=== Verify APK exists ==="
             ls -lh "$APK_PATH"
 
-            echo "=== Starting Appium 2.x server ==="
-            nohup appium --port 4723 --address 127.0.0.1 --log-level error > /tmp/appium.log 2>&1 &
-            sleep 30
-
-            echo "=== Appium readiness check ==="
-            curl -sf http://127.0.0.1:4723/status && echo "Appium is ready" || { echo "Appium log:"; cat /tmp/appium.log; }
-
             echo "=== Running Python test suite ==="
             python appium-testing/test.py
 
-            echo "=== Stopping Appium ==="
-            pkill -f "node.*appium" || echo "Appium already stopped"
-
-            echo "=== Appium Log (Last 200 lines) ==="
-            tail -n 200 /tmp/appium.log || true
-
             echo "=== Report files ==="
             ls -lh appium-testing/ | grep -E "xlsx|md" || echo "No report files yet"
+
+      # ── 9. STOP APPIUM SERVER ───────────────────────────────────────────────
+      - name: 🛑 Stop Appium Server
+        if: always()
+        run: |
+          if [ -f /tmp/appium.pid ]; then
+            kill "$(cat /tmp/appium.pid)" 2>/dev/null || true
+            echo "Appium server stopped."
+          else
+            echo "No Appium PID found."
+          fi
+          echo "=== Appium Log (Last 200 lines) ==="
+          tail -n 200 /tmp/appium.log || true
 
       # ── 8. PUBLISH STEP SUMMARY ──────────────────────────────────────────────
       - name: 📋 Publish Results to Actions Summary

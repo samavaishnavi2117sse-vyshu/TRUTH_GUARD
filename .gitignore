@@ -14,9 +14,22 @@
 .cxx
 local.properties
 
+# Android build outputs
+app/build/
+build/
+
 # Appium testing
 appium-testing/venv/
 appium-testing/*.log
 appium-testing/Appium_E2E_Report_*.xlsx
 appium-testing/test-summary.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Node.js
+node_modules/
 
