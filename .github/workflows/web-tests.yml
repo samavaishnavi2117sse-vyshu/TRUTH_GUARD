@@ -1,0 +1,115 @@
+name: TruthGuard Web E2E Testing CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  web-tests:
+    name: 🧪 Selenium E2E Tests — 135 Test Cases
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ─────────────────────────────────────────────────────────
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js ──────────────────────────────────────────────────────────
+      - name: ⚙️ Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── 3. Chrome (ubuntu-latest already has it; this ensures latest) ───────
+      - name: 🌐 Setup Google Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      # ── 4. Web App Dependencies ─────────────────────────────────────────────
+      - name: 📦 Install Web App Dependencies
+        run: npm install
+        working-directory: TruthGuard-Web/web-app
+
+      # ── 5. Selenium + ExcelJS Dependencies ──────────────────────────────────
+      - name: 📦 Install Selenium Test Dependencies
+        run: npm install
+        working-directory: selenium-testing
+
+      # ── 6. Run the 135 E2E Tests ─────────────────────────────────────────────
+      #    selenium-webdriver 4.6+ includes selenium-manager which auto-downloads
+      #    the correct ChromeDriver — no manual chromedriver install needed.
+      - name: 🧪 Run Selenium E2E Tests
+        run: node test.js
+        working-directory: selenium-testing
+
+      # ── 7. Verify Report Files Were Generated ────────────────────────────────
+      - name: 🔍 Verify Generated Report Files
+        if: always()
+        run: |
+          echo "=== Contents of selenium-testing/ ==="
+          ls -lah selenium-testing/
+          echo ""
+          echo "=== Checking for Excel report ==="
+          XLSX=$(ls selenium-testing/Selenium_E2E_Report_TruthGuard_*.xlsx 2>/dev/null | head -1)
+          if [ -n "$XLSX" ]; then
+            echo "✅ Excel report found: $XLSX"
+            ls -lh "$XLSX"
+          else
+            echo "❌ No .xlsx report found in selenium-testing/"
+          fi
+          echo ""
+          echo "=== Checking for Markdown summary ==="
+          if [ -f "selenium-testing/test-summary.md" ]; then
+            echo "✅ Markdown summary found"
+          else
+            echo "❌ test-summary.md not found"
+          fi
+
+      # ── 8. Publish Results to GitHub Actions Step Summary ────────────────────
+      #    This makes the test results visible DIRECTLY in the Actions UI
+      #    (no download needed — just open the workflow run and scroll up)
+      - name: 📝 Publish Test Results to Actions Summary
+        if: always()
+        run: |
+          if [ -f "selenium-testing/test-summary.md" ]; then
+            cat selenium-testing/test-summary.md >> $GITHUB_STEP_SUMMARY
+            echo "✅ Test summary published to GitHub Actions UI"
+          else
+            echo "## ⚠️ Test Summary Not Found" >> $GITHUB_STEP_SUMMARY
+            echo "The test-summary.md file was not generated. Check the test runner logs above." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # ── 9. Upload Excel Report as Artifact ───────────────────────────────────
+      #    Artifact name includes the run number so each run has a unique entry.
+      #    Find it at: Actions → This Run → scroll to bottom → Artifacts section
+      - name: 📊 Upload Excel Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Selenium_E2E_Report_TruthGuard_Run-${{ github.run_number }}
+          path: selenium-testing/Selenium_E2E_Report_TruthGuard_*.xlsx
+          retention-days: 90
+          if-no-files-found: error
+
+      # ── 10. How to Find the Report ──────────────────────────────────────────
+      - name: 📋 How to Access the Test Report
+        if: always()
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════════════════════════════╗"
+          echo "║     ✅ TruthGuard Selenium E2E — Test Run Complete           ║"
+          echo "╠══════════════════════════════════════════════════════════════╣"
+          echo "║                                                              ║"
+          echo "║  📊 OPTION 1 — View results inline (no download needed):    ║"
+          echo "║     → Click the  Summary  tab on the left of this run page  ║"
+          echo "║       OR scroll to the top of this run page                 ║"
+          echo "║                                                              ║"
+          echo "║  📥 OPTION 2 — Download full Excel report:                  ║"
+          echo "║     → Scroll to the BOTTOM of this run page                 ║"
+          echo "║     → Look for the  Artifacts  section                      ║"
+          echo "║     → Click: Selenium_E2E_Report_TruthGuard_Run-${{ github.run_number }}       ║"
+          echo "║                                                              ║"
+          echo "╚══════════════════════════════════════════════════════════════╝"
