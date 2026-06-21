@@ -1065,7 +1065,20 @@ def _rotate(driver, orientation):
     time.sleep(1.5)
 
 
+def _ensure_home(driver):
+    driver.activate_app(APP_PACKAGE)
+    for _ in range(3):
+        if driver.find_elements(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("TRUTHGUARD")'):
+            return
+        try:
+            driver.back()
+            time.sleep(0.5)
+        except Exception:
+            pass
+
+
 def _e2e_fake(driver):
+    _ensure_home(driver)
     click_btn(driver, "Verify News")
     analyze(driver, "Breaking: hoax about global leaders proven false")
     assert_visible(driver, "❌ Likely Fake News")
@@ -1076,6 +1089,7 @@ def _e2e_fake(driver):
 
 
 def _e2e_genuine(driver):
+    _ensure_home(driver)
     click_btn(driver, "Verify News")
     analyze(driver, "NASA confirms successful satellite launch for climate monitoring")
     assert_visible(driver, "✅ Likely Genuine News")
@@ -1086,6 +1100,7 @@ def _e2e_genuine(driver):
 
 
 def _e2e_all_screens(driver):
+    _ensure_home(driver)
     pairs = [
         ("Verify News",  "Verify News"),
         ("Trending News", "📰 Trending News"),
@@ -1093,14 +1108,14 @@ def _e2e_all_screens(driver):
         ("About",        "TruthGuard"),
     ]
     for btn, header in pairs:
-        go_back(driver)
         click_btn(driver, btn)
         assert_visible(driver, header)
-    go_back(driver)
-    assert_visible(driver, "TRUTHGUARD")
+        go_back(driver)
+        assert_visible(driver, "TRUTHGUARD")
 
 
 def _e2e_state_reset(driver):
+    _ensure_home(driver)
     click_btn(driver, "Verify News")
     analyze(driver, "shocking rumor exposed by investigator")
     assert_visible(driver, "❌ Likely Fake News")
@@ -1118,6 +1133,7 @@ def _e2e_state_reset(driver):
 
 
 def _e2e_dash_trending(driver):
+    _ensure_home(driver)
     click_btn(driver, "Dashboard")
     assert_visible(driver, "92%")
     go_back(driver)
