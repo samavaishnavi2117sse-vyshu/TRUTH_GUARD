@@ -18,7 +18,6 @@ try:
 except ImportError:
     print("Required packages missing. Run: pip install -r requirements.txt")
     sys.exit(1)
-from appium.webdriver.common.touch_action import TouchAction
 
 try:
     import openpyxl
@@ -204,26 +203,21 @@ def analyze(driver, text):
 
 
 def swipe_down(driver):
-    # Use mobile swipe action compatible with UIAutomator2
-    # Use TouchAction for swipe down as mobile: swipe may be unsupported on this Appium version
-
+    # Use native driver.swipe for swipe down
     size = driver.get_window_size()
     start_y = int(size['height'] * 0.8)
     end_y = int(size['height'] * 0.2)
     x = int(size['width'] / 2)
-    TouchAction(driver).press(x=x, y=start_y).wait(500).move_to(x=x, y=end_y).release().perform()
+    driver.swipe(x, start_y, x, end_y, 500)
 
 
 def swipe_up(driver):
-    # Use TouchAction for swipe up
+    # Use native driver.swipe for swipe up
     size = driver.get_window_size()
     start_y = int(size['height'] * 0.2)
     end_y = int(size['height'] * 0.8)
     x = int(size['width'] / 2)
-    TouchAction(driver).press(x=x, y=start_y).wait(500).move_to(x=x, y=end_y).release().perform()
-    # Deprecated swipe_up removed – using TouchAction implementation above.
-    # def swipe_up(driver):
-    #     driver.swipe(540, 600, 540, 1400, 500)
+    driver.swipe(x, start_y, x, end_y, 500)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ENVIRONMENT SETUP
