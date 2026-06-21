@@ -419,7 +419,7 @@ def run_all_tests(driver):
 
     tc("Verify UI", "TC-027", "Analyze button is clickable",
        "Clickable attribute = true",
-       lambda: _check_clickable(driver, "Analyze"))
+       lambda: _check_clickable_nodestructive(driver, "Analyze"))
 
     tc("Verify UI", "TC-028", "EditText is enabled",
        "enabled attribute = true",
@@ -1009,6 +1009,22 @@ def _check_btn_count(driver):
 
 
 def _check_clickable(driver, text):
+    el = find_text(driver, text)
+    # Attempt to click the element; if it raises, consider it not clickable.
+    try:
+        el.click()
+        # Return to previous screen to avoid side effects for subsequent navigation.
+        try:
+            go_back(driver)
+        except Exception:
+            pass
+    except Exception as e:
+        raise AssertionError(f"'{text}' is not clickable: {e}")
+
+
+def _check_clickable_nodestructive(driver, text):
+    """Check clickable/enabled attributes WITHOUT actually clicking — safe for
+    buttons whose click has a side-effect that isn't a simple back-navigable screen."""
     el = find_text(driver, text)
     is_clickable = el.get_attribute("clickable")
     is_enabled = el.get_attribute("enabled")
