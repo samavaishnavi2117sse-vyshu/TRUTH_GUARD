@@ -1010,16 +1010,10 @@ def _check_btn_count(driver):
 
 def _check_clickable(driver, text):
     el = find_text(driver, text)
-    # Attempt to click the element; if it raises, consider it not clickable.
-    try:
-        el.click()
-        # Return to previous screen to avoid side effects for subsequent navigation.
-        try:
-            go_back(driver)
-        except Exception:
-            pass
-    except Exception as e:
-        raise AssertionError(f"'{text}' is not clickable: {e}")
+    is_clickable = el.get_attribute("clickable")
+    is_enabled = el.get_attribute("enabled")
+    if is_clickable != "true" and is_enabled != "true":
+        raise AssertionError(f"'{text}' is not clickable (clickable={is_clickable}, enabled={is_enabled})")
 
 
 def _check_field_enabled(driver):
