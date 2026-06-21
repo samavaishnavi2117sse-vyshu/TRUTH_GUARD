@@ -1,13 +1,17 @@
 {
-  "name": "truth-guard-selenium-tests",
+  "name": "truthguard-selenium-web-tests",
   "version": "1.0.0",
-  "description": "Selenium E2E Tests for TruthGuard Web App",
+  "description": "Selenium WebDriver E2E Test Suite for TruthGuard Web Application — 135 Test Cases, Excel Report",
   "main": "test.js",
+  "scripts": {
+    "test": "node test.js",
+    "test:headed": "node test.js --headed"
+  },
   "dependencies": {
     "exceljs": "^4.4.0",
     "selenium-webdriver": "^4.22.0"
   },
-  "scripts": {
-    "test": "node test.js"
+  "engines": {
+    "node": ">=16.0.0"
   }
 }

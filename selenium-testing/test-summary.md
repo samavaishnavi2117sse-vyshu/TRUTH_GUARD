@@ -1,6 +1,6 @@
 # 🛡️ TruthGuard Web — Selenium E2E Test Report
 
-> **Generated:** 21/6/2026, 7:35:53 pm &nbsp;|&nbsp; **Browser:** Google Chrome &nbsp;|&nbsp; **Engine:** Node.js + Selenium WebDriver 4.x
+> **Generated:** 21/6/2026, 7:44:32 pm &nbsp;|&nbsp; **Browser:** Google Chrome &nbsp;|&nbsp; **Engine:** Node.js + Selenium WebDriver 4.x
 
 ---
 
@@ -8,7 +8,7 @@
 
 | 🟢 Pass Rate | 📋 Total Tests | ✅ Passed | ❌ Failed | ⏱️ Duration |
 |:-----------:|:--------------:|:---------:|:---------:|:----------:|
-| **100%** | **135** | **135** | **0** | **71.2s** |
+| **100%** | **135** | **135** | **0** | **69.2s** |
 
 ## 📋 Module Breakdown
 
@@ -28,4 +28,4 @@
 > All **135** test cases passed successfully with a **100%** pass rate.
 
 ---
-*Excel report saved as `Selenium_E2E_Report_TruthGuard_2026-06-21T14-04-42.xlsx` in this directory.*
+*Excel report saved as `Selenium_E2E_Report_TruthGuard_2026-06-21T14-13-23.xlsx` in this directory.*
