@@ -1500,7 +1500,7 @@ def main():
         print("==========================================================")
 
         ts          = datetime.now().strftime("%Y%m%d_%H%M%S")
-                base_dir = os.path.dirname(os.path.abspath(__file__))
+        base_dir    = os.path.dirname(os.path.abspath(__file__))
         report_xlsx = os.path.join(base_dir, f"Appium_E2E_Report_TruthGuard_{ts}.xlsx")
         report_md   = os.path.join(base_dir, "test-summary.md")
 
