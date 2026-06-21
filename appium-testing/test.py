@@ -223,10 +223,42 @@ def swipe_up(driver):
 #  ENVIRONMENT SETUP
 # ═══════════════════════════════════════════════════════════════════════════════
 def start_emulator():
-    print("\n📋 MODULE X: Dummy Tests — 100 Passing Test Cases (TC-023 to TC-100)")
-    for i in range(23, 101):
-        tc("Dummy", f"TC-{i:03}", f"Dummy test {i}", "No-op dummy test that always passes", lambda: None)
-    sys.exit(0)
+    print("\n🔍 Checking for running emulator/device...")
+    res = subprocess.run([ADB_PATH, "devices"], capture_output=True, text=True)
+    lines = [l.strip() for l in res.stdout.splitlines()
+             if l.strip() and "List of devices" not in l]
+    if any("device" in l or "emulator" in l for l in lines):
+        print("🟢 Emulator/device already running.")
+        return
+
+    if IS_CI:
+        print("⏳ CI mode: waiting for emulator from runner action...")
+        subprocess.run([ADB_PATH, "wait-for-device"], timeout=180)
+        for _ in range(60):
+            r = subprocess.run([ADB_PATH, "shell", "getprop", "sys.boot_completed"],
+                               capture_output=True, text=True)
+            if "1" in r.stdout:
+                print("🟢 Emulator ready.")
+                time.sleep(3)
+                return
+            time.sleep(3)
+        print("⚠️  Boot-check timed out — proceeding.")
+        return
+
+    if not EMULATOR_PATH:
+        raise RuntimeError("EMULATOR_PATH not configured.")
+    print(f"🚀 Launching emulator: {AVD_NAME}")
+    subprocess.Popen([EMULATOR_PATH, "-avd", AVD_NAME, "-delay-adb"])
+    subprocess.run([ADB_PATH, "wait-for-device"])
+    for _ in range(60):
+        r = subprocess.run([ADB_PATH, "shell", "getprop", "sys.boot_completed"],
+                           capture_output=True, text=True)
+        if "1" in r.stdout:
+            print("🟢 Emulator booted.")
+            time.sleep(3)
+            return
+        time.sleep(2)
+    print("⚠️  Boot-check timed out.")
 
 
 def start_appium_server():
@@ -1502,6 +1534,10 @@ def main():
         generate_markdown_summary(report_md)
 
         print("\n✨ Testing complete! Open the .xlsx report for full details.")
+
+        if failed > 0 or total == 0:
+            print("\n❌ Suite failed: one or more tests failed or no tests were run.", flush=True)
+            sys.exit(1)
 
 
 if __name__ == "__main__":

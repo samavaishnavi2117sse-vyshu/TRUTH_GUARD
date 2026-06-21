@@ -67,6 +67,7 @@ jobs:
 
       # ── 7. RUN EMULATOR + APPIUM + TESTS ────────────────────────────────────
       - name: 📱 Run Appium E2E Tests
+        timeout-minutes: 20
         uses: reactivecircus/android-emulator-runner@v2
         env:
           CI: 'true'
@@ -98,7 +99,10 @@ jobs:
             python appium-testing/test.py
 
             echo "=== Stopping Appium ==="
-            pkill -f "node.*appium" 2>/dev/null || true
+            pkill -f "node.*appium" || echo "Appium already stopped"
+
+            echo "=== Appium Log (Last 200 lines) ==="
+            tail -n 200 /tmp/appium.log || true
 
             echo "=== Report files ==="
             ls -lh appium-testing/ | grep -E "xlsx|md" || echo "No report files yet"
